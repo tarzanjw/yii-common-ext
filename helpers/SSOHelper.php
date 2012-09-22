@@ -79,7 +79,7 @@ H21aBnYt+t7bErbAque5aYWKeLGGqEQWFmxxUcW3qOjh3HUiDmQ=
 
         $cipherText = base64_decode($cipherText, true);
         if ($cipherText === false) return false;
-        $x = openssl_public_decrypt($cipherText, $plainText, self::OPENSSL_PADDING);
+        $x = openssl_public_decrypt($cipherText, $plainText, $pubKey, self::OPENSSL_PADDING);
         if (!$x) return false;
 
         return $plainText;
@@ -204,5 +204,14 @@ H21aBnYt+t7bErbAque5aYWKeLGGqEQWFmxxUcW3qOjh3HUiDmQ=
     	);
 
     	return self::encrypt(json_encode($token));
+	}
+
+	static public function returnImage()
+	{
+		header('Content-Type: image/gif');
+
+		# this is an image with 1pixel x 1pixel
+		$img = base64_decode('R0lGODdhAQABAPAAAL6+vgAAACwAAAAAAQABAAACAkQBADs=');
+		echo $img;
 	}
 }
