@@ -1,12 +1,15 @@
 <?php
-	$this->pageHeader = '';
+	/** @var OpenIDUserController $this */
+//	$this->pageHeader = 'SignIn throughs OpenID';
 
-	$ru = $this->getReturnUrl();
+	$this->layout = 'column1';
+
+	$ru = $this->getContUrl();
 	$providers = array(
 		array(
-			'name'=>'Bảo Kim',
-			'logo'=>$this->assetsUrl.'/images/bk_logo.png',
-			'link'=>$this->createUrl('', array('p'=>'baokim','ru'=>$ru)),
+			'name'=>'Vật Giá',
+			'logo'=>$this->assetsUrl.'/images/logo-vatgia-square.png',
+			'link'=>$this->createUrl('', array('p'=>'vg','ru'=>$ru)),
 		),
 		array(
 			'name'=>'Google',
@@ -21,13 +24,14 @@
 	);
 ?>
 
-<div class="hero-unit">
-	<h2>Choose your OpenID Providers</h2>
-    <br>
+<div>
+	<p class="lead" style="text-align: center;">Choose your OpenID Providers
 
     <?php foreach ($providers as $p): ?>
     <a href="<?php echo $p['link']; ?>">
     	<img src="<?php echo $p['logo']; ?>" alt="<?php echo $p['name']; ?>">
     </a>
     <?php endforeach; ?>
+
+    </p>
 </div>

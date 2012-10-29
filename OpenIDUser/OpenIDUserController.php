@@ -2,6 +2,8 @@
 
 require_once __DIR__.'/LightOpenID.php';
 
+Yii::import('ext.common.Hq.HqController.HqController');
+
 /**
 * This class support all operations with OpenID
 *
@@ -12,6 +14,7 @@ CREATE TABLE open_id_user(
   name TINYTEXT NOT NULL,
   avatar TINYTEXT DEFAULT NULL,
   enable TINYINT(1) NOT NULL DEFAULT 1,
+  roles SET('ADMIN','MODERATOR','MEMBER') NOT NULL DEFAULT 'MEMBER',
   created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE INDEX UK_open_id_user__email (email)
@@ -22,12 +25,17 @@ CHARACTER SET utf8
 COLLATE utf8_general_ci;
 * </code>
 *
-* @property string $returnUrl the last url of User before he redirected to current url
+* @property string $contUrl the url that will be redirected to when user signed in
 * @property CWebUser $user
 * @property string $modelClass
 */
-class OpenIDUserController extends Controller
+class OpenIDUserController extends HqController
 {
+    public $defaultAction = 'admin';
+    public $layout = 'column1';
+
+    public $roles=array();
+
     public $requiredAttributes = array(
 		'contact/email',
 		'namePerson',
@@ -55,10 +63,6 @@ class OpenIDUserController extends Controller
 		'person/guid'=>'id',
 		'person/gender'=>'gender',
 		'media/image/default'=>'avatar',
-//		'company/name',
-//		'company/email',
-//		'person/website',
-//		'merchant/website',
     );
 
     private $_modelClass='ext.common.OpenIDUser.OpenIDUser';
@@ -72,7 +76,7 @@ class OpenIDUserController extends Controller
     	return $this->_modelClass;
     }
 
-    public $userComponentName='user';
+    public $userComponentName='hqUser';
 
     function init()
     {
@@ -81,6 +85,18 @@ class OpenIDUserController extends Controller
         if ($this->userComponentName != 'user')
         	Yii::app()->setComponent('user', Yii::app()->{$this->userComponentName});
     }
+
+    function filters()
+	{
+		return array('accessControl');
+	}
+
+	function accessRules()
+	{
+		return CMap::mergeArray(array(
+			array('allow', 'actions'=>array('signIn','signOut'), 'users'=>array('*')),
+		), parent::accessRules());
+	}
 
     function getViewPath()
     {
@@ -101,23 +117,20 @@ class OpenIDUserController extends Controller
         return $this->_assetsUrl;
     }
 
-	private $_returnUrl;
-	function getReturnUrl()
+	private $_contUrl;
+	function getContUrl()
 	{
-        if (!isset($this->_returnUrl)) {
-        	$x = Yii::app()->getRequest()->getQuery('ru');
-            if (!empty($x)) return $this->_returnUrl = $x;
+        if (!isset($this->_contUrl)) {
+        	$x = Yii::app()->getRequest()->getQuery('_cont');
+            if (!empty($x)) return $this->_contUrl = $x;
 
-            $x = $this->getUser()->returnUrl;
-            if (!empty($x)) return $this->_returnUrl = $x;
+            $x = $this->getUser()->getReturnUrl();
+            if (!empty($x)) return $this->_contUrl = $x;
 
-            $x = Yii::app()->getRequest()->getUrlReferrer();
-            if (!empty($x)) return $this->_returnUrl = $x;
-
-    		return $this->_returnUrl = Yii::app()->homeUrl;
+    		return $this->_contUrl = Yii::app()->homeUrl;
         }
 
-        return $this->_returnUrl;
+        return $this->_contUrl;
 	}
 
 	/**
@@ -139,20 +152,33 @@ class OpenIDUserController extends Controller
 			$this->renderPartial('close_popup');
 			return;
 		}
-		$this->redirect($this->getReturnUrl());
+		$this->redirect($this->getContUrl());
+	}
+
+	/**
+	 * Returns the data model based on the primary key given in the GET variable.
+	 * If the data model is not found, an HTTP exception will be raised.
+	 * @param integer the ID of the model to be loaded
+	 */
+	public function loadModel($id)
+	{
+		$model=CActiveRecord::model($this->modelClass)->findByPk($id);
+		if($model===null)
+			throw new CHttpException(404,$this->modelClass.' #'.$id.' does not exist.');
+		return $model;
 	}
 
 	function actions()
 	{
 		return array(
-        	'signin'=>'OpenIDSignInAction',
+        	'signIn'=>'OpenIDSignInAction',
         	'admin'=>'OpenIDAdminAction',
 		);
 	}
 
 	function actionSignout()
 	{
-    	$lastUrl = $this->returnUrl;
+    	$lastUrl = $this->getContUrl();
 
         $this->getUser()->logout();
         $this->redirect($lastUrl);
@@ -200,7 +226,7 @@ class OpenIDSignInAction extends CAction
     protected $_providers = array(
     	'google'=>'https://www.google.com/accounts/o8/id',
     	'yahoo'=>'http://open.login.yahooapis.com/openid20/www.yahoo.com/xrds',
-    	'baokim'=>'http://x.x/openid/server',
+    	'vg'=>'http://id.vatgia.com/OpenID/server/',
     );
 
 	protected function doGainAccess($openIDIdentity)
@@ -255,7 +281,9 @@ class OpenIDSignInAction extends CAction
 
 	protected function doCallback()
 	{
-		if (Yii::app()->getRequest()->getQuery('openid_mode') !== 'id_res') return $this->controller->returnLastUrl();
+		if (Yii::app()->getRequest()->getQuery('openid_mode') !== 'id_res') {
+			return $this->controller->returnLastUrl();
+		}
 
 		$openid = new LightOpenID();
 
@@ -313,17 +341,58 @@ class OpenIDAdminAction extends CAction
 		$model->save();
     }
 
+    /**
+	 * Returns the data model based on the primary key given in the GET variable.
+	 * If the data model is not found, an HTTP exception will be raised.
+	 * @param integer the ID of the model to be loaded
+	 */
+	public function loadModel($id)
+	{
+		$model=OpenIdUser::model()->findByPk($id);
+		if($model===null)
+			throw new CHttpException(404,'The requested page does not exist.');
+		return $model;
+	}
+
+	/**
+	 * Updates a particular model.
+	 * If update is successful, the browser will be redirected to the 'view' page.
+	 * @param integer $id the ID of the model to be updated
+	 */
+	public function doUpdate($id)
+	{
+		$modelClass = $this->getController()->modelClass;
+		$model=$this->loadModel($id);
+
+		// Uncomment the following line if AJAX validation is needed
+		// $this->performAjaxValidation($model);
+
+		if(isset($_POST[$modelClass]))
+		{
+			$post = $_POST[$modelClass];
+//			if(empty($post['roles'])) $post['roles'] = array();
+			$model->attributes=$post;
+			if($model->save())
+				Yii::app()->user->setFlash('success', 'Update success');
+			else
+				Yii::app()->user->setFlash('error', 'Update failed');
+		}
+
+		$this->controller->render('update',array(
+			'model'=>$model,
+		));
+	}
+
     function run()
     {
-        if (isset($_POST['btnEnable']) && !empty($_POST['btnEnable'])) $this->enableUser($_POST['btnEnable'], true);
-        if (isset($_POST['btnDisable']) && !empty($_POST['btnDisable'])) $this->enableUser($_POST['btnDisable'], false);
+    	if (isset($_GET['update'])) return $this->doUpdate($_GET['update']);
 
     	$modelClass = $this->getController()->modelClass;
  		$model=new $modelClass('search');
 
         $model->unsetAttributes();  // clear any default values
-        if(isset($_GET[$modelClass]))
-            $model->attributes=$_GET[$modelClass];
+        if(isset($_REQUEST[$modelClass]))
+            $model->attributes=$_REQUEST[$modelClass];
 
         $this->getController()->render('admin',array(
             'model'=>$model,

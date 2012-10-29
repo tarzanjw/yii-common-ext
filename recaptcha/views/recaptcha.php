@@ -7,7 +7,7 @@
 	</div>
 	<div class="recaptcha_only_if_incorrect_sol" style="color:red">Incorrect please try again</div>
     <div class="recaptcha-main">
-	<span class="recaptcha_only_if_image"><?= Yii::t('view', 'Nhập lại chữ trên:'); ?></span>
+	<span class="recaptcha_only_if_image"><?= Yii::t('view', 'Nhập lại hai chữ trên:'); ?></span>
 
 	<input type="text" id="recaptcha_response_field" name="recaptcha_response_field" />
 
@@ -18,10 +18,10 @@
 </div>
 
 <script type="text/javascript"
-	 src="http://www.google.com/recaptcha/api/challenge?k=<?= $publicKey; ?>">
+	 src="https://www.google.com/recaptcha/api/challenge?k=<?= $publicKey; ?>">
 </script>
 <noscript>
-	<iframe src="http://www.google.com/recaptcha/api/noscript?k=<?= $publicKey; ?>"
+	<iframe src="https://www.google.com/recaptcha/api/noscript?k=<?= $publicKey; ?>"
 		height="300" width="100%" frameborder="0"></iframe><br>
 	<textarea name="recaptcha_challenge_field" rows="3" cols="40">
 	</textarea>

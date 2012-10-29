@@ -5,7 +5,6 @@ $this->breadcrumbs=array(
 );
 
 $this->menu=array(
-    array('label'=>'List OpenIDUser','url'=>array('index')),
     array('label'=>'Create OpenIDUser','url'=>array('create')),
 );
 
@@ -15,12 +14,32 @@ $this->pageHeader = 'Manage OpenID Users';
 <form method="POST">
 <?php $this->widget('bootstrap.widgets.TbGridView',array(
     'id'=>'open-iduser-grid',
+//    'type'=>'striped',
     'dataProvider'=>$model->search(),
+    'selectableRows'=>false,
     'ajaxUpdate'=>false,
     'filter'=>$model,
+    'rowCssClassExpression'=>function($i, $e) {
+    	$classes = !($i%2)?array('odd'):array('even');
+    	if (in_array('ADMIN', $e->roles)) $classes[] = 'success';
+    	if (!$e->enable) $classes[] = 'error';
+
+    	return implode(' ', $classes);
+    },
     'columns'=>array(
-        'id',
-        'email',
+        array(
+        	'name'=>'email',
+        	'type'=>'raw',
+        	'value'=>function($e) {
+        		$i = $e->enable ? '<i class="icon-thumbs-up"></i>':'<i class="icon-thumbs-down"></i>';
+            	$i .= '&nbsp'.$e->email;
+
+            	return CHtml::link($i, array('', 'update'=>$e->id), array(
+//                	'data-toggle'=>"modal",
+//                	'data-target'=>"#modal",
+            	));
+			}
+        ),
         array(
         	'name'=>'name',
         	'type'=>'raw',
@@ -33,39 +52,9 @@ $this->pageHeader = 'Manage OpenID Users';
         	},
         ),
         array(
-        	'name'=>'enable',
-        	'filter'=>CHtml::activeDropDownList($model, 'enable', array(
-            	''=>'All',
-            	0=>'Disabled',
-            	1=>'Enabled',
-        	)),
+        	'name'=>'roles',
         	'type'=>'raw',
-        	'htmlOptions'=>array(
-            	'style'=>'text-align:right;width:100px;'
-        	),
-        	'value'=>function($e) {
-                if ($e->enable)
-                	return Yii::app()->controller->widget('bootstrap.widgets.TbButton', array(
-                		'buttonType'=>'submit',
-                		'label'=>'Disable',
-                		'icon'=>'thumbs-down',
-                		'htmlOptions'=>array(
-                        	'name'=>'btnDisable',
-                        	'value'=>$e->email,
-                		),
-                	), true);
-
-                return Yii::app()->controller->widget('bootstrap.widgets.TbButton', array(
-                		'buttonType'=>'submit',
-                	'label'=>'Enable',
-                	'icon'=>'thumbs-up',
-                	'type'=>'info',
-                	'htmlOptions'=>array(
-                        'name'=>'btnEnable',
-                        'value'=>$e->email,
-                	),
-                ), true);
-			}
+        	'value'=>'implode(", ",$data->roles)',
         ),
         array(
         	'name'=>'created_time',
@@ -75,16 +64,8 @@ $this->pageHeader = 'Manage OpenID Users';
         ),
         /*array(
             'class'=>'bootstrap.widgets.TbButtonColumn',
-            'buttons'=>array(
-            	'disable'=>array(
-            		'icon'=>'ban-circle',
-            		'label'=>'Disable',
-            	),
-            ),
-
-            'template'=>'{disable} {delete}',
-            'template'=>'{delete}',
-        ),*/
+            'template'=>'{update} {delete}',
+        ), */
     ),
 )); ?>
 </form>

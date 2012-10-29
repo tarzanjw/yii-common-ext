@@ -1,5 +1,4 @@
 <?php
-
 /**
  * This is the model class for table "open_id_user".
  *
@@ -9,6 +8,7 @@
  * @property string $name
  * @property string $avatar
  * @property boolean $enable
+ * @property array $roles
  * @property string $created_time
  */
 class OpenIDUser extends CActiveRecord
@@ -22,6 +22,19 @@ class OpenIDUser extends CActiveRecord
     {
         return parent::model($className);
     }
+
+    /**
+	* @inheritdoc
+	*/
+	function behaviors()
+	{
+		return array(
+			'EnumFieldBehavior'=>array(
+				'class'=>'ext.common.behaviors.SETFieldBehavior',
+				'fields'=>array('roles'),
+			),
+		);
+	}
 
     /**
      * @return string the associated database table name
@@ -40,7 +53,7 @@ class OpenIDUser extends CActiveRecord
         // will receive user inputs.
         return array(
             array('email, name', 'required'),
-            array('enable, avatar, created_time', 'safe'),
+            array('enable, avatar, roles, created_time', 'safe'),
             array('email', 'length', 'max'=>255),
             array('email', 'unique', 'caseSensitive'=>false),
             // The following rule is used by search().
